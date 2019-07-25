@@ -1,0 +1,293 @@
+PRAGMA foreign_keys = ON;
+
+## CREATE TABLE service_state
+CREATE TABLE service_state (
+    state INTEGER PRIMARY KEY,
+    description TEXT
+);
+INSERT INTO service_state VALUES (0, "NOT START");
+INSERT INTO service_state VALUES (1, "AVAILABLE");
+INSERT INTO service_state VALUES (3, "DISABLE");
+INSERT INTO service_state VALUES (4, "CANCELLED");
+INSERT INTO service_state VALUES (5, "REMOVED");
+
+
+# CREATE TABLE message_state
+CREATE TABLE message_state (
+    state INTEGER PRIMARY KEY,
+    description TEXT
+);
+INSERT INTO message_state VALUES (0, "UNPROCESSED");
+INSERT INTO message_state VALUES (1, "PROCESSING");
+INSERT INTO message_state VALUES (2, "PROCESSED");
+INSERT INTO message_state VALUES (5, "REMOVED");
+
+
+# _type 0, srv; 1, client; 2, msg
+## Create Service Table
+CREATE TABLE _service (
+    _id TEXT PRIMARY KEY,
+    _name TEXT UNIQUE,
+    env TEXT NOT NULL,
+    _type INT NOT NULL,
+    installed INT NOT NULL DEFAULT 0,
+    state INTEGER NOT NULL DEFAULT 0,
+    description TEXT,
+    FOREIGN KEY(state) REFERENCES service_state(state)
+);
+INSERT INTO _service VALUES ("S001", "watchdog", "WATCHDOG_HOME", 1, 0, 0, "Application controller");
+INSERT INTO _service VALUES ("S002", "messenger", "MESSENGER_HOME", 2, 0, 0, "Message handler");
+INSERT INTO _service VALUES ("S003", "deployer", "DEPLOYER_HOME", 1, 0, 0, "Software controller");
+INSERT INTO _service VALUES ("S004", "os_monitor", "OS_MONITOR_HOME", 1, 0, 0, "Operating system monitoring");
+INSERT INTO _service VALUES ("S005", "collector", "COLLECTOR_HOME", 1, 0, 0, "Data collector");
+INSERT INTO _service VALUES ("S006", "devmgr", "DEVMGR_HOME", 1, 0, 0, "Device manager");
+INSERT INTO _service VALUES ("S007", "topmgr", "TOPMGR_HOME", 0, 0, 0, "Topic manager for Kafka");
+INSERT INTO _service VALUES ("S008", "appsrv", "APPSRV_HOME", 0, 0, 0, "Watchdog management");
+INSERT INTO _service VALUES ("S009", "dcsrv", "DCSRV_HOME", 0, 0, 0, "Data collector management");
+INSERT INTO _service VALUES ("S010", "osmsrv", "OSMSRV_HOME", 0, 0, 0, "Os_monitor management");
+INSERT INTO _service VALUES ("S011", "relsrv", "RELSRV_HOME", 0, 0, 0, "Release management");
+INSERT INTO _service VALUES ("S012", "devsrv", "DEVSRV_HOME", 0, 0, 0, "Device manager management");
+INSERT INTO _service VALUES ("S013", "msggw", "MSGGW_HOME", 0, 0, 0, "Message Gateway");
+INSERT INTO _service VALUES ("S014", "messer", "MESSER_HOME", 1, 0, 0, "ST inspection backend SW");
+INSERT INTO _service VALUES ("S015", "staoi", "STAOI_HOME", 1, 0, 0, "ST AOI frontend SW");
+INSERT INTO _service VALUES ("S016", "stvrs", "STVRS_HOME", 1, 0, 0, "ST VRS frontend SW");
+INSERT INTO _service VALUES ("S017", "webmgt", "WEBMGT_HOME", 0, 0, 0, "Web management");
+INSERT INTO _service VALUES ("S018", "localweb", "LOCALWEB_HOME", 1, 0, 0, "Local web");
+INSERT INTO _service VALUES ("S019", "netmgr", "NETMGR_HOME", 1, 0, 0, "Network manager");
+INSERT INTO _service VALUES ("S020", "stdd", "STDD_HOME", 1, 0, 0, "Substrate defect detection");
+INSERT INTO _service VALUES ("S021", "controller", "CONTROLLER_HOME", 1, 0, 0, "CTRL");
+INSERT INTO _service VALUES ("S022", "simulator", "SIMULATOR_HOME", 1, 0, 0, "MQTT simulator");
+INSERT INTO _service VALUES ("S023", "mqtt_monitor", "MQTT_MONITOR_HOME", 1, 0, 0, "MQTT monitor");
+INSERT INTO _service VALUES ("S024", "kafka_monitor", "KAFKA_MONITOR_HOME", 1, 0, 0, "KAFKA monitor");
+INSERT INTO _service VALUES ("S025", "event_reporter", "EVENT_REPORTER_HOME", 0, 0, 0, "event reporter");
+INSERT INTO _service VALUES ("S026", "alarmgr", "ALARMGR_HOME", 1, 0, 0, "alarm manager");
+INSERT INTO _service VALUES ("S027", "decider", "DECIDER_HOME", 1, 0, 0, "data processor");
+INSERT INTO _service VALUES ("S028", "jobmgr", "JOBMGR_HOME", 1, 0, 0, "job manager");
+INSERT INTO _service VALUES ("S029", "jobsrv", "JOBSRV_HOME", 0, 0, 0, "job service");
+INSERT INTO _service VALUES ("S030", "etlsrv", "ETLSRV_HOME", 0, 0, 0, "etl service");
+INSERT INTO _service VALUES ("S031", "tentacle", "TENTACLE_HOME", 1, 0, 0, "I/O");
+INSERT INTO _service VALUES ("S032", "commander", "COMMANDER_HOME", 0, 0, 0, "commander of devices");
+INSERT INTO _service VALUES ("S033", "data_reviewer", "DATA_REVIEWER_HOME", 0, 0, 0, "commander of devices");
+
+INSERT INTO _service VALUES ("E001", "MES", "MES_HOME", 0, 0, 0, "MES");
+
+update _service set installed=1, state=1 where _id in ('S001', 'S002','S003','S006','S008','S009','S011','S012','S017','S025','S026','S030');
+update _service set state=0 where _id='S017';
+
+update sysconf set ip='192.168.1.187', mac='24:6e:96:1d:21:1f', vua='00000102', status=1;
+update sysconf set ip='192.168.1.189', mac='24:6e:96:19:b2:ac', vua='00000100', status=1;
+192.168.1.189|24:6e:96:19:b2:ac|00000100|0001|SAT0000001|MG00000001|MA00000001|DMT0000001|1|2017-06-22 05:54:35|123456|
+
+
+# Create Table for the service
+CREATE TABLE S033 (
+    msg_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ack_msg_id INTEGER,
+    from_srv_id TEXT,
+    from_msg_id INTEGER,
+    message TEXT,
+    state INTEGER NOT NULL DEFAULT 0,
+    _timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(from_srv_id) REFERENCES _service(_id),
+    FOREIGN KEY(state) REFERENCES message_state(state),
+    FOREIGN KEY(ack_msg_id) REFERENCES S033(msg_id)
+);
+CREATE TABLE S002 (
+    msg_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ack_msg_id INTEGER,
+    from_srv_id TEXT,
+    from_msg_id INTEGER,
+    message TEXT,
+    state INTEGER NOT NULL DEFAULT 0,
+    _timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(from_srv_id) REFERENCES _service(_id),
+    FOREIGN KEY(state) REFERENCES message_state(state),
+    FOREIGN KEY(ack_msg_id) REFERENCES S001(msg_id)
+);
+CREATE TABLE S003 (
+    msg_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ack_msg_id INTEGER,
+    from_srv_id TEXT,
+    from_msg_id INTEGER,
+    message TEXT,
+    state INTEGER NOT NULL DEFAULT 0,
+    _timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(from_srv_id) REFERENCES _service(
+    FOREIGN KEY(state) REFERENCES message_state(state),
+    FOREIGN KEY(ack_msg_id) REFERENCES S003(msg_id)
+);
+CREATE TABLE S006 (
+    msg_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ack_msg_id INTEGER,
+    from_srv_id TEXT,
+    from_msg_id INTEGER,
+    message TEXT,
+    state INTEGER NOT NULL DEFAULT 0,
+    _timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(from_srv_id) REFERENCES _service(_id),
+    FOREIGN KEY(state) REFERENCES message_state(state),
+    FOREIGN KEY(ack_msg_id) REFERENCES S003(msg_id)
+);
+CREATE TABLE S008 (
+    msg_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ack_msg_id INTEGER,
+    from_srv_id TEXT,
+    from_msg_id INTEGER,
+    message TEXT,
+    state INTEGER NOT NULL DEFAULT 0,
+    _timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(from_srv_id) REFERENCES _service(_id),
+    FOREIGN KEY(state) REFERENCES message_state(state),
+    FOREIGN KEY(ack_msg_id) REFERENCES S003(msg_id)
+);
+CREATE TABLE S009 (
+    msg_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ack_msg_id INTEGER,
+    from_srv_id TEXT,
+    from_msg_id INTEGER,
+    message TEXT,
+    state INTEGER NOT NULL DEFAULT 0,
+    _timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(from_srv_id) REFERENCES _service(_id),
+    FOREIGN KEY(state) REFERENCES message_state(state),
+    FOREIGN KEY(ack_msg_id) REFERENCES S003(msg_id)
+);
+CREATE TABLE S011 (
+    msg_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ack_msg_id INTEGER,
+    from_srv_id TEXT,
+    from_msg_id INTEGER,
+    message TEXT,
+    state INTEGER NOT NULL DEFAULT 0,
+    _timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(from_srv_id) REFERENCES _service(_id),
+    FOREIGN KEY(state) REFERENCES message_state(state),
+    FOREIGN KEY(ack_msg_id) REFERENCES S003(msg_id)
+);
+CREATE TABLE S012 (
+    msg_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ack_msg_id INTEGER,
+    from_srv_id TEXT,
+    from_msg_id INTEGER,
+    message TEXT,
+    state INTEGER NOT NULL DEFAULT 0,
+    _timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(from_srv_id) REFERENCES _service(_id),
+    FOREIGN KEY(state) REFERENCES message_state(state),
+    FOREIGN KEY(ack_msg_id) REFERENCES S003(msg_id)
+);
+CREATE TABLE S017 (
+    msg_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ack_msg_id INTEGER,
+    from_srv_id TEXT,
+    from_msg_id INTEGER,
+    message TEXT,
+    state INTEGER NOT NULL DEFAULT 0,
+    _timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(from_srv_id) REFERENCES _service(_id),
+    FOREIGN KEY(state) REFERENCES message_state(state),
+    FOREIGN KEY(ack_msg_id) REFERENCES S003(msg_id)
+);
+CREATE TABLE S025 (
+    msg_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ack_msg_id INTEGER,
+    from_srv_id TEXT,
+    from_msg_id INTEGER,
+    message TEXT,
+    state INTEGER NOT NULL DEFAULT 0,
+    _timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(from_srv_id) REFERENCES _service(_id),
+    FOREIGN KEY(state) REFERENCES message_state(state),
+    FOREIGN KEY(ack_msg_id) REFERENCES S003(msg_id)
+);
+CREATE TABLE S026 (
+    msg_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ack_msg_id INTEGER,
+    from_srv_id TEXT,
+    from_msg_id INTEGER,
+    message TEXT,
+    state INTEGER NOT NULL DEFAULT 0,
+    _timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(from_srv_id) REFERENCES _service(_id),
+    FOREIGN KEY(state) REFERENCES message_state(state),
+    FOREIGN KEY(ack_msg_id) REFERENCES S003(msg_id)
+);
+CREATE TABLE S029 (
+    msg_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ack_msg_id INTEGER,
+    from_srv_id TEXT,
+    from_msg_id INTEGER,
+    message TEXT,
+    state INTEGER NOT NULL DEFAULT 0,
+    _timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(from_srv_id) REFERENCES _service(_id),
+    FOREIGN KEY(state) REFERENCES message_state(state),
+    FOREIGN KEY(ack_msg_id) REFERENCES S029(msg_id)
+);
+CREATE TABLE S031 (
+    msg_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ack_msg_id INTEGER,
+    from_srv_id TEXT,
+    from_msg_id INTEGER,
+    message TEXT,
+    state INTEGER NOT NULL DEFAULT 0,
+    _timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(from_srv_id) REFERENCES _service(_id),
+    FOREIGN KEY(state) REFERENCES message_state(state),
+    FOREIGN KEY(ack_msg_id) REFERENCES S003(msg_id)
+);
+
+
+
+CREATE TABLE sysconf (
+    ip TEXT,
+    mac TEXT,
+    vua TEXT,
+    sop_id TEXT NOT NULL,
+    station_id TEXT,
+    machine_group_id TEXT,
+    machine_id TEXT, 
+    device_model_type_id NOT NULL,
+    status INT NOT NULL DEFAULT 0,
+    start_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    user_id TEXT,
+    sgroup TEXT
+);
+INSERT INTO sysconf (ip, mac, sop_id, station_id, machine_group_id, machine_id, device_model_type_id, user_id) values (
+    "192.168.1.189",
+    "24:6e:96:19:b2:ac",
+    "0001",
+    "SAT0000001",
+    "MG00000001",
+    "MA00000001",
+    "DMT0000001",
+    "160620"
+);
+
+
+
+
+
+
+
+## DROP
+
+DROP TABLE S001;
+DROP TABLE S002;
+DROP TABLE S003;
+DROP TABLE S004;
+DROP TABLE S005;
+DROP TABLE S006;
+DROP TABLE S007;
+DROP TABLE S008;
+DROP TABLE S009;
+DROP TABLE S010;
+DROP TABLE S011;
+DROP TABLE S012;
+DROP TABLE S013;
+DROP TABLE S014;
+DROP TABLE S015;
+DROP TABLE S016;
+DROP TABLE S017;
+DROP TABLE S018;
+DROP TABLE _service;
